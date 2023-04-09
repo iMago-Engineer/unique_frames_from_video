@@ -21,7 +21,7 @@ def save_frame_as_image(output_dir: str, frame: npt.NDArray, n: int) -> None:
     else:
         logger.info(f"Saved file: {file_path}")
 
-def extract_frames_with_diff_edge(frames: list, threshold: float = 1):
+def extract_frames_with_diff_edges(frames: list, threshold: float = 1):
     frame_with_diff_edges_ids = [0]
 
     first_frame = frames[0]
@@ -74,7 +74,7 @@ def remove_similar_frames(
             transition_frame_ids.append(frame_id)
             prev_grey_transition_frame = gray_frame
 
-    print(f"t: {transition_frame_ids}")
+    logging.debug(f"t: {transition_frame_ids}")
 
     # Distinct frames are between two consecutive frames where transition happens
     distinct_frame_ids = [0]
@@ -104,12 +104,11 @@ def main():
 
         frames.append(frame)
 
-    edges = extract_frames_with_diff_edge(frames)
+    frames_with_diff_edges = extract_frames_with_diff_edges(frames)
 
-    # edges.insert(0, first_frame)
-    ff = remove_similar_frames(edges, threshold=30)
-    for i, frame in enumerate(ff):
-        save_frame_as_image(output_dir, frame, (i + 1) * 200)
+    distinct_frames = remove_similar_frames(frames_with_diff_edges)
+    for i, frame in enumerate(distinct_frames):
+        save_frame_as_image(output_dir, frame, i)
 
     # Release the video capture and close all windows
     cap.release()
