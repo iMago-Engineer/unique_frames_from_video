@@ -11,13 +11,15 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 class ImageSaveError(Exception):
     pass
 
-def save_frame_as_image(output_dir: str, cap: cv2.VideoCapture, frame: cv2.VideoCapture):
-    file_name = f'frame_{cap.get(cv2.CAP_PROP_POS_FRAMES)}.jpg'
-    file_path = os.path.join(output_dir, file_name)
+def save_frame_as_image(output_dir: str, frame: npt.NDArray, n: int) -> None:
+    file_path = os.path.join(output_dir, f'frame_{n}.jpg')
+
     success = cv2.imwrite(file_path, frame)
     if not success:
-        print("Error writing file:", file_path)
+        logger.error(f"Error writing file: {file_path}")
         raise ImageSaveError
+    else:
+        logger.info(f"Saved file: {file_path}")
 
 def compare_edge(
         cap: cv2.VideoCapture,
@@ -68,12 +70,6 @@ def compare_edge(
     for i in frames_to_extract:
         return_frames.append(frames[int(i)])
     return return_frames
-    
-    # read_fps= cap.get(cv2.CAP_PROP_FPS) # 1秒あたりのフレーム数を取得
-    # for frame_id in frames_to_extract:
-    #     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_id - 1 * read_fps) # 秒数と１秒あたりフレーム数をかけたフレームからスタート
-    #     _, frame = cap.read()
-    #     save_frame_as_image(output_dir, cap, frame)
 
 def group_and_split(
         cap: cv2.VideoCapture,
@@ -120,7 +116,7 @@ def group_and_split(
     for frame_id in frames_to_extract:
         cap.set(cv2.CAP_PROP_POS_FRAMES, frame_id - 1 * read_fps) # 秒数と１秒あたりフレーム数をかけたフレームからスタート
         _, frame = cap.read()
-        save_frame_as_image(output_dir, cap, frame)
+        save_frame_as_image(output_dir, frame, frame_id)
 
 def main():
     threshold = 30
@@ -135,7 +131,7 @@ def main():
 
     # Read the first frame and output it unconditionally
     _, frame = cap.read()
-    save_frame_as_image(output_dir, cap, frame)
+    save_frame_as_image(output_dir, frame, 0)
 
     # Define the initial frame to compare against
     prev_output_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -171,9 +167,7 @@ def main():
     # Save image between transition frames
     for i in range(len(transition_frames)-1):
         frame = edges[int((transition_frames[i] + transition_frames[i+1])/2)]
-        file_path = os.path.join(output_dir, "output_{}.jpg".format(i))
-        success = cv2.imwrite(file_path, frame)
-        save_frame_as_image(output_dir, cap, frame)
+        save_frame_as_image(output_dir, frame, i+1)
 
     # Release the video capture and close all windows
     cap.release()
