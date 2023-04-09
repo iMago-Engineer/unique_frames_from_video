@@ -23,14 +23,14 @@ def save_frame_as_image(output_dir: str, frame: npt.NDArray, n: int) -> None:
         logger.info(f"Saved file: {file_path}")
 
 def extract_frames_with_diff_edges(frames: list[npt.NDArray], threshold: float = 1) -> list[npt.NDArray]:
-    frame_with_diff_edges_ids = [0]
+    frame_with_diff_edges_inds = [0]
 
     first_frame = frames[0]
     prev_frame = cv2.cvtColor(first_frame, cv2.COLOR_BGR2GRAY)
     prev_edges = cv2.Canny(prev_frame, 100, 200)
 
     # Find frames where changes in edges happen
-    for frame_id, frame in enumerate(frames, 1):
+    for frame_ind, frame in enumerate(frames, 1):
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray_frame, 100, 200)
 
@@ -39,31 +39,31 @@ def extract_frames_with_diff_edges(frames: list[npt.NDArray], threshold: float =
         mean_diff = abs_diff.mean()
 
         if mean_diff > threshold:
-            frame_with_diff_edges_ids.append(frame_id)
+            frame_with_diff_edges_inds.append(frame_ind)
 
         prev_edges = edges
 
     # Representative frames are between two consecutive frames with different edges
-    representative_frame_ids = [0] # include the first frame
-    for i, left_frame_id in enumerate(frame_with_diff_edges_ids[:-1]):
-        right_frame_id = frame_with_diff_edges_ids[i+1]
+    representative_frame_inds = [0] # include the first frame
+    for i, left_frame_ind in enumerate(frame_with_diff_edges_inds[:-1]):
+        right_frame_ind = frame_with_diff_edges_inds[i+1]
 
-        representative_frame_ids.append((left_frame_id + right_frame_id) // 2)
+        representative_frame_inds.append((left_frame_ind + right_frame_ind) // 2)
 
-    logging.debug(f"e: ({len(representative_frame_ids)} {representative_frame_ids}")
+    logging.debug(f"e: ({len(representative_frame_inds)} {representative_frame_inds}")
 
-    return [ frames[int(frame_i)] for frame_i in representative_frame_ids ]
+    return [ frames[int(frame_i)] for frame_i in representative_frame_inds ]
 
 def remove_similar_frames(
         frames: list[npt.NDArray],
         threshold: int = 30
 ) -> list[npt.NDArray]:
-    transition_frame_ids = []
+    transition_frame_inds = []
 
     # Find frames where transition happens
     initial_frame = frames[0]
     prev_grey_transition_frame = cv2.cvtColor(initial_frame, cv2.COLOR_BGR2GRAY)
-    for frame_id, frame in enumerate(frames, 1):
+    for frame_ind, frame in enumerate(frames, 1):
         # Convert the frame to grayscale and calculate the absolute difference
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -72,21 +72,21 @@ def remove_similar_frames(
 
         # If the mean difference is greater than the threshold, output the frame
         if mean_diff > threshold:
-            transition_frame_ids.append(frame_id)
+            transition_frame_inds.append(frame_ind)
             prev_grey_transition_frame = gray_frame
 
-    logging.debug(f"t: {transition_frame_ids}")
+    logging.debug(f"t: {transition_frame_inds}")
 
     # Distinct frames are between two consecutive frames where transition happens
-    distinct_frame_ids = [0]
-    for i, left_frame_id in enumerate(transition_frame_ids[:-1]):
-        right_frame_id = transition_frame_ids[i+1]
+    distinct_frame_inds = [0]
+    for i, left_frame_ind in enumerate(transition_frame_inds[:-1]):
+        right_frame_ind = transition_frame_inds[i+1]
 
         # not really sure why we need `-1` here
         # without `-1` we will get a different output
-        distinct_frame_ids.append((left_frame_id + right_frame_id) // 2 - 1)
+        distinct_frame_inds.append((left_frame_ind + right_frame_ind) // 2 - 1)
 
-    return [ frames[frame_i] for frame_i in distinct_frame_ids ]
+    return [ frames[frame_i] for frame_i in distinct_frame_inds ]
 
 def main():
     # Create the output directory if it doesn't exist
