@@ -43,7 +43,7 @@ def extract_frames_with_diff_edge(frames: list, threshold: float = 1):
         prev_edges = edges
 
     # Representative frames are between two consecutive frames with different edges
-    representative_frame_ids = []
+    representative_frame_ids = [0] # include the first frame
     for i, left_frame_id in enumerate(frame_with_diff_edges_ids[:-1]):
         right_frame_id = frame_with_diff_edges_ids[i+1]
 
@@ -51,17 +51,15 @@ def extract_frames_with_diff_edge(frames: list, threshold: float = 1):
 
     logging.debug(f"e: ({len(representative_frame_ids)} {representative_frame_ids}")
 
-    # TODO: want to include `first_frame` as the first element
     return [ frames[int(frame_i)] for frame_i in representative_frame_ids ]
 
 def remove_similar_frames(
         frames: list,
         threshold: int = 30
 ):
-    # the index of `frames` where changes are detected
     transition_frame_ids = []
 
-    # detect where changes happen
+    # Find frames where transition happens
     initial_frame = frames[0]
     prev_grey_transition_frame = cv2.cvtColor(initial_frame, cv2.COLOR_BGR2GRAY)
     for frame_id, frame in enumerate(frames, 1):
@@ -78,30 +76,25 @@ def remove_similar_frames(
 
     print(f"t: {transition_frame_ids}")
 
-    # find the middle frame between each transition
-    distinct_frames = []
+    # Distinct frames are between two consecutive frames where transition happens
+    distinct_frame_ids = [0]
     for i, left_frame_id in enumerate(transition_frame_ids[:-1]):
         right_frame_id = transition_frame_ids[i+1]
 
-        frame_id = (left_frame_id + right_frame_id) // 2 - 1
+        # not really sure why we need `-1` here
+        # without `-1` we will get a different output
+        distinct_frame_ids.append((left_frame_id + right_frame_id) // 2 - 1)
 
-        distinct_frames.append(frames[frame_id])
-
-    return distinct_frames
+    return [ frames[frame_i] for frame_i in distinct_frame_ids ]
 
 def main():
-    # Load the video file
-    cap = cv2.VideoCapture('sample.mp4')
-
     # Create the output directory if it doesn't exist
     output_dir = 'output'
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # Read the first frame and output it unconditionally
-    # _, first_frame = cap.read()
-    # print(cap.get(cv2.CAP_PROP_POS_FRAMES))
-    # save_frame_as_image(output_dir, first_frame, 0)
+    # Load the video file
+    cap = cv2.VideoCapture('sample.mp4')
 
     frames = []
     while True:
