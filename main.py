@@ -9,13 +9,24 @@ logger.setLevel(logging.INFO)
 # use Python logger
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
+class ImageSaveError(Exception):
+    pass
+
+def save_frame_as_image(output_dir: str, cap: cv2.VideoCapture, frame: cv2.VideoCapture):
+    file_name = f'frame_{cap.get(cv2.CAP_PROP_POS_FRAMES)}.jpg'
+    file_path = os.path.join(output_dir, file_name)
+    success = cv2.imwrite(file_path, frame)
+    if not success:
+        print("Error writing file:", file_path)
+        raise ImageSaveError
+
 def main():
     # Load the video file
     cap = cv2.VideoCapture('sample.mp4')
     logger.info(cap)
 
     # Define the threshold value
-    threshold = 0
+    threshold = 50
 
     # Create the output directory if it doesn't exist
     output_dir = 'output'
@@ -24,11 +35,7 @@ def main():
 
     # Read the first frame and output it unconditionally
     _, frame = cap.read()
-    file_name = f'frame_{0}.jpg'
-    file_path = os.path.join(output_dir, file_name)
-    success = cv2.imwrite(file_path, frame)
-    if not success:
-        print("Error writing file:", file_path)
+    save_frame_as_image(output_dir, cap, frame)
 
     # Define the initial frame to compare against
     prev_output_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -44,20 +51,17 @@ def main():
         
         # Convert the frame to grayscale and calculate the absolute difference
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        ssim_index = ssim(gray_frame, prev_output_frame, data_range=prev_output_frame.max()-prev_output_frame.min())
-        # abs_diff = cv2.absdiff(gray_frame, prev_output_frame)
+        # ssim_index = ssim(gray_frame, prev_output_frame, data_range=prev_output_frame.max()-prev_output_frame.min())
+        abs_diff = cv2.absdiff(gray_frame, prev_output_frame)
         
         # Calculate the mean of the absolute difference
-        # mean_diff = abs_diff.mean()
+        mean_diff = abs_diff.mean()
         # logger.debug(f"mean_diff: {mean_diff}")
 
         # If the mean difference is greater than the threshold, output the frame
-        # if mean_diff > threshold:
-        if ssim_index < 0.7:
-            file_path = 'output/frame_{}.jpg'.format(cap.get(cv2.CAP_PROP_POS_FRAMES))
-            success = cv2.imwrite(file_path, frame)
-            if not success:
-                print(f"Error writing file: {file_path}")
+        if mean_diff > threshold:
+        # if ssim_index < 0.7:
+            save_frame_as_image(output_dir, cap, frame)
   
         # Update the previous frame
         prev_output_frame = gray_frame
