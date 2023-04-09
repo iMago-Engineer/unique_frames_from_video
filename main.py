@@ -28,11 +28,13 @@ def compare_edge(
         output_dir: str = 'output',
     ):
     frame_ids = [0]
+    frames = []
 
     # Loop through each frame of the video
     while True:
         # Read the next frame
         ret, frame = cap.read()
+        frames.append(frame)
         
         # Break the loop if we've reached the end of the video
         if not ret:
@@ -56,7 +58,6 @@ def compare_edge(
 
         # Update the previous frame
         prev_frame = gray_frame
-
     frames_to_extract = []
     for i, left_frame_id in enumerate(frame_ids):
         if i + 1 == len(frame_ids):
@@ -65,11 +66,16 @@ def compare_edge(
         right_frame_id = frame_ids[i+1]
         frames_to_extract.append((left_frame_id + right_frame_id) // 2)
     
-    read_fps= cap.get(cv2.CAP_PROP_FPS) # 1秒あたりのフレーム数を取得
-    for frame_id in frames_to_extract:
-        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_id - 1 * read_fps) # 秒数と１秒あたりフレーム数をかけたフレームからスタート
-        _, frame = cap.read()
-        save_frame_as_image(output_dir, cap, frame)
+    return_frames = []
+    for i in frames_to_extract:
+        return_frames.append(frames[int(i)])
+    return return_frames
+    
+    # read_fps= cap.get(cv2.CAP_PROP_FPS) # 1秒あたりのフレーム数を取得
+    # for frame_id in frames_to_extract:
+    #     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_id - 1 * read_fps) # 秒数と１秒あたりフレーム数をかけたフレームからスタート
+    #     _, frame = cap.read()
+    #     save_frame_as_image(output_dir, cap, frame)
 
 def group_and_split(
         cap: cv2.VideoCapture,
@@ -185,6 +191,7 @@ def compare_selected_frame_and_save_with_abs(
         output_dir: str = 'output',
     ):
     # Loop through each frame of the video
+    # Detect edge
     while True:
         # Read the next frame
         ret, frame = cap.read()
@@ -239,8 +246,9 @@ def compare_selected_frame_and_save_with_ssim(
             prev_frame = gray_frame
 
 def main():
+    threshold = 40
     # Load the video file
-    cap = cv2.VideoCapture('sample.mp4')
+    cap = cv2.VideoCapture('sample3.mp4')
     logger.info(cap)
 
     # Create the output directory if it doesn't exist
@@ -256,7 +264,50 @@ def main():
     prev_output_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Loop through each frame of the video
-    compare_edge(cap, prev_output_frame, output_dir=output_dir)
+    edges = compare_edge(cap, prev_output_frame, output_dir=output_dir)
+
+    # Delete similar images
+    frames = []
+    i = 0
+    transition_frames = []
+
+    # Loop through each frame of the video
+    for frame in edges:
+
+        
+        # Convert the frame to grayscale and calculate the absolute difference
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        # ssim_index = ssim(gray_frame, prev_output_frame, data_range=prev_output_frame.max()-prev_output_frame.min())
+        abs_diff = cv2.absdiff(gray_frame, prev_output_frame)
+        
+        # Calculate the mean of the absolute difference
+        mean_diff = abs_diff.mean()
+        # logger.debug(f"mean_diff: {mean_diff}")
+
+        # If the mean difference is greater than the threshold, output the frame
+        if mean_diff > threshold:
+            transition_frames.append(i)
+            prev_output_frame = gray_frame
+
+        # if ssim_index < 0.7:
+
+        # Update the previous frame
+        i += 1
+
+    print(transition_frames)
+    # Save image between transition frames
+    for i in range(len(transition_frames)-1):
+        frame = edges[int((transition_frames[i] + transition_frames[i+1])/2)]
+        file_path = os.path.join(output_dir, "output_{}.jpg".format(i))
+        success = cv2.imwrite(file_path, frame)
+        save_frame_as_image(output_dir, cap, frame)
+
+    # Transition frames
+    for i in transition_frames:
+        frame = edges[i]
+        file_path = os.path.join(output_dir, "transition_{}.jpg".format(i))
+        success = cv2.imwrite(file_path, frame)
+        save_frame_as_image(output_dir, cap, frame)
 
     # Release the video capture and close all windows
     cap.release()
