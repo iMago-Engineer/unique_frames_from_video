@@ -71,52 +71,39 @@ def compare_edge(
         return_frames.append(frames[int(i)])
     return return_frames
 
-def group_and_split(
-        cap: cv2.VideoCapture,
-        prev_frame: cv2.VideoCapture,
-        threshold: float = 50,
-        output_dir: str = 'output',
-    ):
-    frame_ids = [0]
+def remove_similar_frames(
+        initial_frame,
+        frames: list,
+        threshold: int = 30
+):
+    # the index of `frames` where changes are detected
+    transition_frame_ids = []
 
-    # Loop through each frame of the video
-    while True:
-        # Read the next frame
-        ret, frame = cap.read()
-        
-        # Break the loop if we've reached the end of the video
-        if not ret:
-            break
-        
+    # detect where changes happen
+    prev_grey_transition_frame = cv2.cvtColor(initial_frame, cv2.COLOR_BGR2GRAY)
+    for frame_id, frame in enumerate(frames):
         # Convert the frame to grayscale and calculate the absolute difference
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        abs_diff = cv2.absdiff(gray_frame, prev_frame)
-        
-        # Calculate the mean of the absolute difference
+
+        abs_diff = cv2.absdiff(gray_frame, prev_grey_transition_frame)
         mean_diff = abs_diff.mean()
-        print(f"{cap.get(cv2.CAP_PROP_POS_FRAMES)},{mean_diff}")
 
         # If the mean difference is greater than the threshold, output the frame
         if mean_diff > threshold:
-            frame_ids.append(cap.get(cv2.CAP_PROP_POS_FRAMES))
-            # save_frame_as_image(output_dir, cap, frame)
+            transition_frame_ids.append(frame_id)
+            prev_grey_transition_frame = gray_frame
 
-        # Update the previous frame
-        prev_frame = gray_frame
+    print(transition_frame_ids)
 
-    frames_to_extract = []
-    for i, left_frame_id in enumerate(frame_ids):
-        if i + 1 == len(frame_ids):
-            break
+    # find the middle frame between each transition
+    distinct_frames = []
+    for i, left_frame_id in enumerate(transition_frame_ids[:-1]):
+        right_frame_id = transition_frame_ids[i+1]
+        frame_id = (left_frame_id + right_frame_id) // 2
 
-        right_frame_id = frame_ids[i+1]
-        frames_to_extract.append((left_frame_id + right_frame_id) // 2)
-    
-    read_fps= cap.get(cv2.CAP_PROP_FPS) # 1秒あたりのフレーム数を取得
-    for frame_id in frames_to_extract:
-        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_id - 1 * read_fps) # 秒数と１秒あたりフレーム数をかけたフレームからスタート
-        _, frame = cap.read()
-        save_frame_as_image(output_dir, frame, frame_id)
+        distinct_frames.append(frames[frame_id])
+
+    return distinct_frames
 
 def main():
     threshold = 30
@@ -140,34 +127,10 @@ def main():
     # edge 検知されて、抽出したframe
     edges = compare_edge(cap, prev_output_frame, output_dir=output_dir)
 
-    # Delete similar images
-    i = 0
-    transition_frames = []
-
-    # Loop through each frame of the video
-    for frame in edges:
-        # Convert the frame to grayscale and calculate the absolute difference
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        # ssim_index = ssim(gray_frame, prev_output_frame, data_range=prev_output_frame.max()-prev_output_frame.min())
-        abs_diff = cv2.absdiff(gray_frame, prev_output_frame)
-        
-        # Calculate the mean of the absolute difference
-        mean_diff = abs_diff.mean()
-        # logger.debug(f"mean_diff: {mean_diff}")
-
-        # If the mean difference is greater than the threshold, output the frame
-        if mean_diff > threshold:
-            transition_frames.append(i)
-            prev_output_frame = gray_frame
-
-        # Update the previous frame
-        i += 1
-
-    print(transition_frames)
-    # Save image between transition frames
-    for i in range(len(transition_frames)-1):
-        frame = edges[int((transition_frames[i] + transition_frames[i+1])/2)]
-        save_frame_as_image(output_dir, frame, i+1)
+    ff = remove_similar_frames(frame, edges, threshold=30)
+    print(ff)
+    for i, frame in enumerate(ff):
+        save_frame_as_image(output_dir, frame, (i + 1) * 200)
 
     # Release the video capture and close all windows
     cap.release()
