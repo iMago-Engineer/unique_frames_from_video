@@ -54,10 +54,7 @@ def extract_frames_with_diff_edges(frames: list[npt.NDArray], threshold: float =
 
     return [ frames[int(frame_i)] for frame_i in representative_frame_inds ]
 
-def remove_similar_frames(
-        frames: list[npt.NDArray],
-        threshold: int = 30
-) -> list[npt.NDArray]:
+def remove_similar_frames(frames: list[npt.NDArray], threshold: int = 15) -> list[npt.NDArray]:
     transition_frame_inds = []
 
     # Find frames where transition happens
@@ -73,7 +70,8 @@ def remove_similar_frames(
         # If the mean difference is greater than the threshold, output the frame
         if mean_diff > threshold:
             transition_frame_inds.append(frame_ind)
-            prev_grey_transition_frame = gray_frame
+
+        prev_grey_transition_frame = gray_frame
 
     logging.debug(f"t: {transition_frame_inds}")
 
