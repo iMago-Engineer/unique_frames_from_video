@@ -246,9 +246,9 @@ def compare_selected_frame_and_save_with_ssim(
             prev_frame = gray_frame
 
 def main():
-    threshold = 40
+    threshold = 30
     # Load the video file
-    cap = cv2.VideoCapture('sample3.mp4')
+    cap = cv2.VideoCapture('sample4.mp4')
     logger.info(cap)
 
     # Create the output directory if it doesn't exist
@@ -299,13 +299,6 @@ def main():
     for i in range(len(transition_frames)-1):
         frame = edges[int((transition_frames[i] + transition_frames[i+1])/2)]
         file_path = os.path.join(output_dir, "output_{}.jpg".format(i))
-        success = cv2.imwrite(file_path, frame)
-        save_frame_as_image(output_dir, cap, frame)
-
-    # Transition frames
-    for i in transition_frames:
-        frame = edges[i]
-        file_path = os.path.join(output_dir, "transition_{}.jpg".format(i))
         success = cv2.imwrite(file_path, frame)
         save_frame_as_image(output_dir, cap, frame)
 
