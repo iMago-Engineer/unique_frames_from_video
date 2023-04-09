@@ -1,6 +1,7 @@
 import logging
 import os
 import cv2
+import numpy.typing as npt
 
 # initialize Python Logger
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ def save_frame_as_image(output_dir: str, frame: npt.NDArray, n: int) -> None:
     else:
         logger.info(f"Saved file: {file_path}")
 
-def extract_frames_with_diff_edges(frames: list, threshold: float = 1):
+def extract_frames_with_diff_edges(frames: list[npt.NDArray], threshold: float = 1) -> list[npt.NDArray]:
     frame_with_diff_edges_ids = [0]
 
     first_frame = frames[0]
@@ -54,9 +55,9 @@ def extract_frames_with_diff_edges(frames: list, threshold: float = 1):
     return [ frames[int(frame_i)] for frame_i in representative_frame_ids ]
 
 def remove_similar_frames(
-        frames: list,
+        frames: list[npt.NDArray],
         threshold: int = 30
-):
+) -> list[npt.NDArray]:
     transition_frame_ids = []
 
     # Find frames where transition happens
