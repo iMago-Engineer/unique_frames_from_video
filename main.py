@@ -40,10 +40,16 @@ def main():
     # Define the initial frame to compare against
     prev_output_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
+    frames = []
+    i = 0
+    transition_frames = []
+
     # Loop through each frame of the video
     while True:
         # Read the next frame
         ret, frame = cap.read()
+        frames.append(frame)
+        i += 1
         
         # Break the loop if we've reached the end of the video
         if not ret:
@@ -60,12 +66,18 @@ def main():
 
         # If the mean difference is greater than the threshold, output the frame
         if mean_diff > threshold:
+            transition_frames.append(i)
         # if ssim_index < 0.7:
             save_frame_as_image(output_dir, cap, frame)
   
         # Update the previous frame
         prev_output_frame = gray_frame
         
+    # Save image between transition frames
+    for i in range(len(transition_frames)-1):
+        frame = frames[int((transition_frames[i] + transition_frames[i+1])/2)]
+        save_frame_as_image(output_dir, cap, frame)
+
     # Release the video capture and close all windows
     cap.release()
     cv2.destroyAllWindows()
