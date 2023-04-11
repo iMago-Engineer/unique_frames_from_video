@@ -162,3 +162,5 @@ cython_debug/
 # Input and Output files
 *.mp4
 output**/
+*.csv
+.DS_Store

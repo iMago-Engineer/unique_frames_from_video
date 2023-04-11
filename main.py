@@ -1,8 +1,7 @@
 import logging
 import os
 import cv2
-from skimage.metrics import structural_similarity as ssim
-import numpy as np
+import numpy.typing as npt
 
 # initialize Python Logger
 logger = logging.getLogger(__name__)
@@ -13,294 +12,102 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 class ImageSaveError(Exception):
     pass
 
-def save_frame_as_image(output_dir: str, cap: cv2.VideoCapture, frame: cv2.VideoCapture):
-    file_name = f'frame_{cap.get(cv2.CAP_PROP_POS_FRAMES)}.jpg'
-    file_path = os.path.join(output_dir, file_name)
+def save_frame_as_image(output_dir: str, frame: npt.NDArray, n: int) -> None:
+    file_path = os.path.join(output_dir, f'frame_{n}.jpg')
+
     success = cv2.imwrite(file_path, frame)
     if not success:
-        print("Error writing file:", file_path)
+        logger.error(f"Error writing file: {file_path}")
         raise ImageSaveError
+    else:
+        logger.info(f"Saved file: {file_path}")
 
-def compare_edge(
-        cap: cv2.VideoCapture,
-        prev_frame: cv2.VideoCapture,
-        threshold: float = 1,
-        output_dir: str = 'output',
-    ):
-    frame_ids = [0]
-    frames = []
+def extract_frames_with_diff_edges(frames: list[npt.NDArray], threshold: float = 1) -> list[npt.NDArray]:
+    frame_with_diff_edges_inds = [0]
 
-    # Loop through each frame of the video
-    while True:
-        # Read the next frame
-        ret, frame = cap.read()
-        frames.append(frame)
-        
-        # Break the loop if we've reached the end of the video
-        if not ret:
-            break
-        
-        # Convert the frame to grayscale and calculate the absolute difference
+    first_frame = frames[0]
+    prev_frame = cv2.cvtColor(first_frame, cv2.COLOR_BGR2GRAY)
+    prev_edges = cv2.Canny(prev_frame, 100, 200)
+
+    # Find frames where changes in edges happen
+    for frame_ind, frame in enumerate(frames, 1):
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
         edges = cv2.Canny(gray_frame, 100, 200)
-        prev_edges = cv2.Canny(prev_frame, 100, 200)
+
+        # Calculate the mean of the absolute difference
         abs_diff = cv2.absdiff(edges, prev_edges)
-        
-        # Calculate the mean of the absolute difference
         mean_diff = abs_diff.mean()
-        print(f"{cap.get(cv2.CAP_PROP_POS_FRAMES)},{mean_diff}")
+
+        if mean_diff > threshold:
+            frame_with_diff_edges_inds.append(frame_ind)
+
+        prev_edges = edges
+
+    # Representative frames are between two consecutive frames with different edges
+    representative_frame_inds = [0] # include the first frame
+    for i, left_frame_ind in enumerate(frame_with_diff_edges_inds[:-1]):
+        right_frame_ind = frame_with_diff_edges_inds[i+1]
+
+        representative_frame_inds.append((left_frame_ind + right_frame_ind) // 2)
+
+    logging.debug(f"e: ({len(representative_frame_inds)} {representative_frame_inds}")
+
+    return [ frames[int(frame_i)] for frame_i in representative_frame_inds ]
+
+def remove_similar_frames(frames: list[npt.NDArray], threshold: int = 15) -> list[npt.NDArray]:
+    transition_frame_inds = []
+
+    # Find frames where transition happens
+    initial_frame = frames[0]
+    prev_grey_transition_frame = cv2.cvtColor(initial_frame, cv2.COLOR_BGR2GRAY)
+    for frame_ind, frame in enumerate(frames, 1):
+        # Convert the frame to grayscale and calculate the absolute difference
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        abs_diff = cv2.absdiff(gray_frame, prev_grey_transition_frame)
+        mean_diff = abs_diff.mean()
 
         # If the mean difference is greater than the threshold, output the frame
         if mean_diff > threshold:
-            frame_ids.append(cap.get(cv2.CAP_PROP_POS_FRAMES))
-            # save_frame_as_image(output_dir, cap, frame)
+            transition_frame_inds.append(frame_ind)
 
-        # Update the previous frame
-        prev_frame = gray_frame
-    frames_to_extract = []
-    for i, left_frame_id in enumerate(frame_ids):
-        if i + 1 == len(frame_ids):
-            break
+        prev_grey_transition_frame = gray_frame
 
-        right_frame_id = frame_ids[i+1]
-        frames_to_extract.append((left_frame_id + right_frame_id) // 2)
-    
-    return_frames = []
-    for i in frames_to_extract:
-        return_frames.append(frames[int(i)])
-    return return_frames
-    
-    # read_fps= cap.get(cv2.CAP_PROP_FPS) # 1秒あたりのフレーム数を取得
-    # for frame_id in frames_to_extract:
-    #     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_id - 1 * read_fps) # 秒数と１秒あたりフレーム数をかけたフレームからスタート
-    #     _, frame = cap.read()
-    #     save_frame_as_image(output_dir, cap, frame)
+    logging.debug(f"t: {transition_frame_inds}")
 
-def group_and_split(
-        cap: cv2.VideoCapture,
-        prev_frame: cv2.VideoCapture,
-        threshold: float = 50,
-        output_dir: str = 'output',
-    ):
-    frame_ids = [0]
+    # Distinct frames are between two consecutive frames where transition happens
+    distinct_frame_inds = [0]
+    for i, left_frame_ind in enumerate(transition_frame_inds[:-1]):
+        right_frame_ind = transition_frame_inds[i+1]
 
-    # Loop through each frame of the video
-    while True:
-        # Read the next frame
-        ret, frame = cap.read()
-        
-        # Break the loop if we've reached the end of the video
-        if not ret:
-            break
-        
-        # Convert the frame to grayscale and calculate the absolute difference
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        abs_diff = cv2.absdiff(gray_frame, prev_frame)
-        
-        # Calculate the mean of the absolute difference
-        mean_diff = abs_diff.mean()
-        print(f"{cap.get(cv2.CAP_PROP_POS_FRAMES)},{mean_diff}")
+        # not really sure why we need `-1` here
+        # without `-1` we will get a different output
+        distinct_frame_inds.append((left_frame_ind + right_frame_ind) // 2 - 1)
 
-        # If the mean difference is greater than the threshold, output the frame
-        if mean_diff > threshold:
-            frame_ids.append(cap.get(cv2.CAP_PROP_POS_FRAMES))
-            # save_frame_as_image(output_dir, cap, frame)
-
-        # Update the previous frame
-        prev_frame = gray_frame
-
-    frames_to_extract = []
-    for i, left_frame_id in enumerate(frame_ids):
-        if i + 1 == len(frame_ids):
-            break
-
-        right_frame_id = frame_ids[i+1]
-        frames_to_extract.append((left_frame_id + right_frame_id) // 2)
-    
-    read_fps= cap.get(cv2.CAP_PROP_FPS) # 1秒あたりのフレーム数を取得
-    for frame_id in frames_to_extract:
-        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_id - 1 * read_fps) # 秒数と１秒あたりフレーム数をかけたフレームからスタート
-        _, frame = cap.read()
-        save_frame_as_image(output_dir, cap, frame)
-
-def compare_prev_frame_and_save_with_abs_and_color(
-        cap: cv2.VideoCapture,
-        prev_frame: cv2.VideoCapture,
-        threshold: float = 50,
-        output_dir: str = 'output',
-    ):
-    # Loop through each frame of the video
-    while True:
-        # Read the next frame
-        ret, frame = cap.read()
-        
-        # Break the loop if we've reached the end of the video
-        if not ret:
-            break
-        
-        # Convert the frame to grayscale and calculate the absolute difference
-        # gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        abs_diff = np.abs(frame.astype(np.float32) - prev_frame.astype(np.float32))
-        
-        # Calculate the mean of the absolute difference
-        mean_diff = abs_diff.mean(axis=(0,1))
-        print(f"{cap.get(cv2.CAP_PROP_POS_FRAMES)},{mean_diff}")
-
-        # If the mean difference is greater than the threshold, output the frame
-        if mean_diff[0] > threshold or mean_diff[1] > threshold or mean_diff[2] > threshold:
-            save_frame_as_image(output_dir, cap, frame)
-
-        # Update the previous frame
-        prev_frame = frame
-
-def compare_prev_frame_and_save_with_abs(
-        cap: cv2.VideoCapture,
-        prev_frame: cv2.VideoCapture,
-        threshold: float = 50,
-        output_dir: str = 'output',
-    ):
-    # Loop through each frame of the video
-    while True:
-        # Read the next frame
-        ret, frame = cap.read()
-        
-        # Break the loop if we've reached the end of the video
-        if not ret:
-            break
-        
-        # Convert the frame to grayscale and calculate the absolute difference
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        abs_diff = cv2.absdiff(gray_frame, prev_frame)
-        
-        # Calculate the mean of the absolute difference
-        mean_diff = abs_diff.mean()
-        print(f"{cap.get(cv2.CAP_PROP_POS_FRAMES)},{mean_diff}")
-
-        # If the mean difference is greater than the threshold, output the frame
-        if mean_diff > threshold:
-            save_frame_as_image(output_dir, cap, frame)
-
-        # Update the previous frame
-        prev_frame = gray_frame
-
-def compare_selected_frame_and_save_with_abs(
-        cap: cv2.VideoCapture,
-        prev_frame: cv2.VideoCapture,
-        threshold: float = 50,
-        output_dir: str = 'output',
-    ):
-    # Loop through each frame of the video
-    # Detect edge
-    while True:
-        # Read the next frame
-        ret, frame = cap.read()
-        
-        # Break the loop if we've reached the end of the video
-        if not ret:
-            break
-        
-        # Convert the frame to grayscale and calculate the absolute difference
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        abs_diff = cv2.absdiff(gray_frame, prev_frame)
-        
-        # Calculate the mean of the absolute difference
-        mean_diff = abs_diff.mean()
-        print(f"{cap.get(cv2.CAP_PROP_POS_FRAMES)},{mean_diff}")
-
-        # If the mean difference is greater than the threshold, output the frame
-        if mean_diff > threshold:
-            save_frame_as_image(output_dir, cap, frame)
-  
-            # Update the previous frame
-            prev_frame = gray_frame
-
-def compare_selected_frame_and_save_with_ssim(
-        cap: cv2.VideoCapture,
-        prev_frame: cv2.VideoCapture,
-        threshold: float = 0.9,
-        output_dir: str = 'output',
-    ):
-    # Loop through each frame of the video
-    while True:
-        # Read the next frame
-        ret, frame = cap.read()
-        
-        # Break the loop if we've reached the end of the video
-        if not ret:
-            break
-        
-        # Convert the frame to grayscale and calculate the absolute difference
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        ssim_index = ssim(gray_frame, prev_frame, data_range=prev_frame.max()-prev_frame.min())
-        
-        # -1 < ssim_index < 1
-        # SSIM index > 0.9: The two images are very similar
-        # 0.7 < SSIM index < 0.9: The two images are fairly similar, but there are some noticeable differences in brightness or contrast.
-        # 0.5 < SSIM index < 0.7: The two images are somewhat similar, but there are significant differences in brightness or contrast.
-        # SSIM index < 0.5: The two images are very different.
-        if ssim_index < threshold:
-            save_frame_as_image(output_dir, cap, frame)
-
-            # Update the previous frame
-            prev_frame = gray_frame
+    return [ frames[frame_i] for frame_i in distinct_frame_inds ]
 
 def main():
-    threshold = 30
-    # Load the video file
-    cap = cv2.VideoCapture('sample4.mp4')
-    logger.info(cap)
-
     # Create the output directory if it doesn't exist
     output_dir = 'output'
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # Read the first frame and output it unconditionally
-    _, frame = cap.read()
-    save_frame_as_image(output_dir, cap, frame)
+    # Load the video file
+    cap = cv2.VideoCapture('sample.mp4')
 
-    # Define the initial frame to compare against
-    prev_output_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-    # Loop through each frame of the video
-    edges = compare_edge(cap, prev_output_frame, output_dir=output_dir)
-
-    # Delete similar images
     frames = []
-    i = 0
-    transition_frames = []
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-    # Loop through each frame of the video
-    for frame in edges:
+        frames.append(frame)
 
-        
-        # Convert the frame to grayscale and calculate the absolute difference
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        # ssim_index = ssim(gray_frame, prev_output_frame, data_range=prev_output_frame.max()-prev_output_frame.min())
-        abs_diff = cv2.absdiff(gray_frame, prev_output_frame)
-        
-        # Calculate the mean of the absolute difference
-        mean_diff = abs_diff.mean()
-        # logger.debug(f"mean_diff: {mean_diff}")
+    frames_with_diff_edges = extract_frames_with_diff_edges(frames)
 
-        # If the mean difference is greater than the threshold, output the frame
-        if mean_diff > threshold:
-            transition_frames.append(i)
-            prev_output_frame = gray_frame
-
-        # if ssim_index < 0.7:
-
-        # Update the previous frame
-        i += 1
-
-    print(transition_frames)
-    # Save image between transition frames
-    for i in range(len(transition_frames)-1):
-        frame = edges[int((transition_frames[i] + transition_frames[i+1])/2)]
-        file_path = os.path.join(output_dir, "output_{}.jpg".format(i))
-        success = cv2.imwrite(file_path, frame)
-        save_frame_as_image(output_dir, cap, frame)
+    distinct_frames = remove_similar_frames(frames_with_diff_edges)
+    for i, frame in enumerate(distinct_frames):
+        save_frame_as_image(output_dir, frame, i)
 
     # Release the video capture and close all windows
     cap.release()
