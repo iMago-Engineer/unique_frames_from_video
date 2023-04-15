@@ -44,11 +44,11 @@ def main():
         distinct_frames = remove_similar_frames(frames_with_diff_edges)
 
         # For DEBUG
-        output_dir = 'output'
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        for i, frame in enumerate(distinct_frames):
-            save_frame_as_image(output_dir, frame, i)
+        # output_dir = 'output'
+        # if not os.path.exists(output_dir):
+        #     os.makedirs(output_dir)
+        # for i, frame in enumerate(distinct_frames):
+        #     save_frame_as_image(output_dir, frame, i)
 
         st.header("抽出画面")
         # Display the distinct frames in a grid format
