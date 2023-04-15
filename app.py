@@ -50,23 +50,27 @@ def main():
         # for i, frame in enumerate(distinct_frames):
         #     save_frame_as_image(output_dir, frame, i)
 
-        st.header("抽出画面")
-        # Display the distinct frames in a grid format
-        cols = st.columns(NUM_COLS)
-        # Allow user to select which frames to download
+        frames_selected = False
         selected_frames = []
-        for i, frame in enumerate(distinct_frames):
-            with cols[i % NUM_COLS]:
-                with st.container():
-                    st.image(frame, use_column_width=True, channels='BGR')
-                    if st.checkbox("👆", key=f'frame_{i}'):
-                        selected_frames.append(frame)
 
-        st.divider()
-        # Allow user to download the selected frames as JPEG files
-        if len(selected_frames) > 0:
-            zip_buffer = zip_images(selected_frames)
-            st.download_button(label='⬇️ 選択した画面をまとめてダウンロード', data=zip_buffer, file_name='frames.zip', mime='application/zip')
+        st.header("抽出画面")
+        with st.form("画面"):
+            cols = st.columns(NUM_COLS)
+
+            for i, frame in enumerate(distinct_frames):
+                with cols[i % NUM_COLS]:
+                    with st.container():
+                        st.image(frame, use_column_width=True, channels='BGR')
+                        if st.checkbox("👆", key=f'frame_{i}'):
+                            selected_frames.append(frame)
+
+            frames_selected = st.form_submit_button("画像ダウンロードの準備")
+
+        # 画面の選択が終わったら、ダウンロードボタンを表示する
+        if frames_selected:
+            if len(selected_frames) > 0:
+                zip_buffer = zip_images(selected_frames)
+                st.download_button(label='⬇️ 選択した画面をまとめてダウンロード', data=zip_buffer, file_name='frames.zip', mime='application/zip')
 
         cv2.destroyAllWindows()
 
