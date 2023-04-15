@@ -62,15 +62,15 @@ def main():
                     if st.checkbox("👆", key=f'frame_{i}'):
                         selected_frames.append(frame)
 
+        st.divider()
         # Allow user to download the selected frames as JPEG files
         if len(selected_frames) > 0:
             zip_buffer = download_images(selected_frames)
-            st.download_button(label='Download selected frames', data=zip_buffer, file_name='frames.zip', mime='application/zip')
+            st.download_button(label='⬇️ 選択した画面をまとめてダウンロード', data=zip_buffer, file_name='frames.zip', mime='application/zip')
 
         cv2.destroyAllWindows()
 
 def download_images(frames):
-
     # Create a temporary directory to store the frames
     if not os.path.exists(DOWNLOAD_DIR):
         os.makedirs(DOWNLOAD_DIR)
