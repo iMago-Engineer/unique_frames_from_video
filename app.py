@@ -31,10 +31,11 @@ def main():
 
     # 動画フィアルのアップロード
     uploaded_file  = st.file_uploader("Choose a video file (.mp4)", type="mp4")
-    # 動画ファイルを OpenCV で読み込むために、一回保存しておく必要がある
-    uploaded_file_path = save_uploaded_file(uploaded_file)
 
     if uploaded_file is not None:
+        # 動画ファイルを OpenCV で読み込むために、一回保存しておく必要がある
+        uploaded_file_path = save_uploaded_file(uploaded_file)
+
         frames = read_frames_from_video_file(uploaded_file_path)
 
         frames_with_diff_edges = extract_frames_with_diff_edges(frames)
