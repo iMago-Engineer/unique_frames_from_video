@@ -9,6 +9,8 @@ TEMP_DIR = 'temp'
 UPLOAD_DIR = f'{TEMP_DIR}/uploads'
 DOWNLOAD_DIR = f'{TEMP_DIR}/downloads'
 
+NUM_COLS = 5
+
 def save_uploaded_file(uploaded_file):
     if not os.path.exists(UPLOAD_DIR):
         os.makedirs(UPLOAD_DIR)
@@ -50,9 +52,9 @@ def main():
 
         st.header("抽出画面")
         # Display the distinct frames in a grid format
-        cols = st.columns(5)
+        cols = st.columns(NUM_COLS)
         for i, frame in enumerate(distinct_frames):
-            cols[i % 5].image(frame, use_column_width=True, channels='BGR')
+            cols[i % NUM_COLS].image(frame, use_column_width=True, channels='BGR')
 
         # Allow user to select which frames to download
         selected_frames = []
