@@ -53,14 +53,14 @@ def main():
         st.header("抽出画面")
         # Display the distinct frames in a grid format
         cols = st.columns(NUM_COLS)
-        for i, frame in enumerate(distinct_frames):
-            cols[i % NUM_COLS].image(frame, use_column_width=True, channels='BGR')
-
         # Allow user to select which frames to download
         selected_frames = []
         for i, frame in enumerate(distinct_frames):
-            if st.checkbox(f"Download frame {i}"):
-                selected_frames.append(frame)
+            with cols[i % NUM_COLS]:
+                with st.container():
+                    st.image(frame, use_column_width=True, channels='BGR')
+                    if st.checkbox("👆", key=f'frame_{i}'):
+                        selected_frames.append(frame)
 
         # Allow user to download the selected frames as JPEG files
         if len(selected_frames) > 0:
