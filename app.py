@@ -9,6 +9,8 @@ TEMP_DIR = 'temp'
 UPLOAD_DIR = f'{TEMP_DIR}/uploads'
 DOWNLOAD_DIR = f'{TEMP_DIR}/downloads'
 
+NUM_COLS = 5
+
 def save_uploaded_file(uploaded_file):
     if not os.path.exists(UPLOAD_DIR):
         os.makedirs(UPLOAD_DIR)
@@ -50,25 +52,25 @@ def main():
 
         st.header("抽出画面")
         # Display the distinct frames in a grid format
-        cols = st.columns(5)
-        for i, frame in enumerate(distinct_frames):
-            cols[i % 5].image(frame, use_column_width=True, channels='BGR')
-
+        cols = st.columns(NUM_COLS)
         # Allow user to select which frames to download
         selected_frames = []
         for i, frame in enumerate(distinct_frames):
-            if st.checkbox(f"Download frame {i}"):
-                selected_frames.append(frame)
+            with cols[i % NUM_COLS]:
+                with st.container():
+                    st.image(frame, use_column_width=True, channels='BGR')
+                    if st.checkbox("👆", key=f'frame_{i}'):
+                        selected_frames.append(frame)
 
+        st.divider()
         # Allow user to download the selected frames as JPEG files
         if len(selected_frames) > 0:
             zip_buffer = download_images(selected_frames)
-            st.download_button(label='Download selected frames', data=zip_buffer, file_name='frames.zip', mime='application/zip')
+            st.download_button(label='⬇️ 選択した画面をまとめてダウンロード', data=zip_buffer, file_name='frames.zip', mime='application/zip')
 
         cv2.destroyAllWindows()
 
 def download_images(frames):
-
     # Create a temporary directory to store the frames
     if not os.path.exists(DOWNLOAD_DIR):
         os.makedirs(DOWNLOAD_DIR)
