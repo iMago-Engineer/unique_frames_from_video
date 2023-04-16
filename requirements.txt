@@ -4,3 +4,4 @@ pipdeptree==2.7.0
 scikit-image==0.20.0
 setuptools==65.5.0
 wheel==0.40.0
+streamlit==1.21.0

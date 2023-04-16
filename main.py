@@ -86,6 +86,21 @@ def remove_similar_frames(frames: list[npt.NDArray], threshold: int = 15) -> lis
 
     return [ frames[frame_i] for frame_i in distinct_frame_inds ]
 
+def read_frames_from_video_file(video_file_path: str) -> list[npt.NDArray]:
+    cap = cv2.VideoCapture(video_file_path)
+
+    frames = []
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        frames.append(frame)
+
+    cap.release()
+
+    return frames
+
 def main():
     # Create the output directory if it doesn't exist
     output_dir = 'output'
