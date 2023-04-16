@@ -31,17 +31,21 @@ def main():
     st.set_page_config(page_title='Video Processing App')
     st.title('Video Processing App')
 
+    # パラメータの設定
+    with st.sidebar:
+        diff_edge_threshold = st.slider("画像構造差分閾値", 0, 10, 1, 1, help="画像の構造 (輪郭など) の違いを検出する感度。数字が大きいほど、抽出画像の枚数が少なくなる。")
+        diff_frame_threshold = st.slider("画像差分閾値", 0, 255, 15, 5, help="画像全体の違いを検出する感度。数字が大きいほど、抽出画像の枚数が少なくなる。")
+
     # 動画フィアルのアップロード
     uploaded_file  = st.file_uploader("Choose a video file (.mp4)", type="mp4")
 
     if uploaded_file is not None:
         # 動画ファイルを OpenCV で読み込むために、一回保存しておく必要がある
         uploaded_file_path = save_uploaded_file(uploaded_file)
-
         frames = read_frames_from_video_file(uploaded_file_path)
 
-        frames_with_diff_edges = extract_frames_with_diff_edges(frames)
-        distinct_frames = remove_similar_frames(frames_with_diff_edges)
+        frames_with_diff_edges = extract_frames_with_diff_edges(frames, threshold=diff_edge_threshold)
+        distinct_frames = remove_similar_frames(frames_with_diff_edges, threshold=diff_frame_threshold)
 
         # For DEBUG
         # output_dir = 'output'
