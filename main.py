@@ -2,6 +2,7 @@ import logging
 import os
 import cv2
 import numpy.typing as npt
+import streamlit as st
 
 # initialize Python Logger
 logger = logging.getLogger(__name__)
@@ -22,6 +23,7 @@ def save_frame_as_image(output_dir: str, frame: npt.NDArray, n: int) -> None:
     else:
         logger.info(f"Saved file: {file_path}")
 
+@st.cache_data
 def extract_frames_with_diff_edges(frames: list[npt.NDArray], threshold: float = 1) -> list[npt.NDArray]:
     frame_with_diff_edges_inds = [0]
 
@@ -54,6 +56,7 @@ def extract_frames_with_diff_edges(frames: list[npt.NDArray], threshold: float =
 
     return [ frames[int(frame_i)] for frame_i in representative_frame_inds ]
 
+@st.cache_data
 def remove_similar_frames(frames: list[npt.NDArray], threshold: int = 15) -> list[npt.NDArray]:
     transition_frame_inds = []
 
