@@ -91,7 +91,9 @@ def read_frames_from_video_file(video_file_path: str) -> list[npt.NDArray]:
 
         frames.append(frame)
 
+    # clean up
     cap.release()
+    os.remove(video_file_path)
 
     return frames
 
