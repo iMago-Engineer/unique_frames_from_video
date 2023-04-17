@@ -1,9 +1,9 @@
 import hashlib
+import os
+
 import streamlit as st
-import shutil
-from main import *
-from io import BytesIO
-from zipfile import ZipFile
+
+from features import *
 
 TEMP_DIR = 'temp'
 UPLOAD_DIR = f'{TEMP_DIR}/uploads'
@@ -73,32 +73,10 @@ def main():
         # 画面の選択が終わったら、ダウンロードボタンを表示する
         if frames_selected:
             if len(selected_frames) > 0:
-                zip_buffer = zip_images(selected_frames)
+                zip_buffer = zip_images(selected_frames, dir=DOWNLOAD_DIR)
                 st.download_button(label='⬇️ 選択した画面をまとめてダウンロード', data=zip_buffer, file_name='frames.zip', mime='application/zip')
 
         cv2.destroyAllWindows()
-
-@st.cache_data
-def zip_images(frames):
-    # Create a temporary directory to store the frames
-    if not os.path.exists(DOWNLOAD_DIR):
-        os.makedirs(DOWNLOAD_DIR)
-
-    # Save the frames as JPEG files in the temporary directory
-    for i, frame in enumerate(frames):
-        file_path = os.path.join(DOWNLOAD_DIR, f'frame_{i}.jpg')
-        cv2.imwrite(file_path, frame)
-
-    # Compress the files in the temporary directory as a ZIP archive
-    zip_buffer = BytesIO()
-    with ZipFile(zip_buffer, 'w') as zip_file:
-        for file_name in os.listdir(DOWNLOAD_DIR):
-            file_path = os.path.join(DOWNLOAD_DIR, file_name)
-            zip_file.write(file_path, file_name)
-
-    shutil.rmtree(DOWNLOAD_DIR)
-
-    return zip_buffer.getvalue()
 
 if __name__ == '__main__':
     main()

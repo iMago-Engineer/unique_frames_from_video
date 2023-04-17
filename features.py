@@ -1,4 +1,8 @@
 import logging
+import os
+import shutil
+from io import BytesIO
+from zipfile import ZipFile
 
 import cv2
 import numpy.typing as npt
@@ -90,3 +94,25 @@ def read_frames_from_video_file(video_file_path: str) -> list[npt.NDArray]:
     cap.release()
 
     return frames
+
+@st.cache_data
+def zip_images(frames, dir: str):
+    # Create a temporary directory to store the frames
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
+    # Save the frames as JPEG files in the temporary directory
+    for i, frame in enumerate(frames):
+        file_path = os.path.join(dir, f'frame_{i}.jpg')
+        cv2.imwrite(file_path, frame)
+
+    # Compress the files in the temporary directory as a ZIP archive
+    zip_buffer = BytesIO()
+    with ZipFile(zip_buffer, 'w') as zip_file:
+        for file_name in os.listdir(dir):
+            file_path = os.path.join(dir, file_name)
+            zip_file.write(file_path, file_name)
+
+    shutil.rmtree(dir)
+
+    return zip_buffer.getvalue()
