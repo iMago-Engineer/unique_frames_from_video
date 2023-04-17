@@ -1,5 +1,5 @@
 import logging
-import os
+
 import cv2
 import numpy.typing as npt
 import streamlit as st
@@ -9,19 +9,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 # use Python logger
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-
-class ImageSaveError(Exception):
-    pass
-
-def save_frame_as_image(output_dir: str, frame: npt.NDArray, n: int) -> None:
-    file_path = os.path.join(output_dir, f'frame_{n}.jpg')
-
-    success = cv2.imwrite(file_path, frame)
-    if not success:
-        logger.error(f"Error writing file: {file_path}")
-        raise ImageSaveError
-    else:
-        logger.info(f"Saved file: {file_path}")
 
 @st.cache_data
 def extract_frames_with_diff_edges(frames: list[npt.NDArray], threshold: float = 1) -> list[npt.NDArray]:
@@ -103,33 +90,3 @@ def read_frames_from_video_file(video_file_path: str) -> list[npt.NDArray]:
     cap.release()
 
     return frames
-
-def main():
-    # Create the output directory if it doesn't exist
-    output_dir = 'output'
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    # Load the video file
-    cap = cv2.VideoCapture('sample.mp4')
-
-    frames = []
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        frames.append(frame)
-
-    frames_with_diff_edges = extract_frames_with_diff_edges(frames)
-
-    distinct_frames = remove_similar_frames(frames_with_diff_edges)
-    for i, frame in enumerate(distinct_frames):
-        save_frame_as_image(output_dir, frame, i)
-
-    # Release the video capture and close all windows
-    cap.release()
-    cv2.destroyAllWindows()
-
-if __name__ == "__main__":
-    main()
