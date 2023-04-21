@@ -1,0 +1,13 @@
+#!/bin/bash
+yum update -y
+
+# nginx conf
+yum install -y nginx
+
+# install pip
+yum install -y python-pip
+
+# install python dependencies
+pip3 install --upgrade pip
+cd /var/www/html/ || exit
+pip3 install -r requirements.txt

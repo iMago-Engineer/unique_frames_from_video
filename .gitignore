@@ -165,3 +165,4 @@ output**/
 *.csv
 .DS_Store
 temp
+**/*.pem
