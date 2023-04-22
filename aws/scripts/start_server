@@ -1,7 +1,4 @@
 #!/bin/bash
 
 # start streamlit
-python3 -m streamlit run app.py --server.port 8080
-
-# start nginx
-service nginx start
+python3 -m streamlit run app.py --server.port 80

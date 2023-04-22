@@ -1,8 +1,4 @@
 #!/bin/bash
-if [[ -n  $(pgrep nginx) ]]; then
-    pkill -9 nginx
-fi
-
 if [[ -n $(pgrep python3) ]]; then
     pkill -9 python3
 fi

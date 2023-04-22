@@ -1,13 +1,8 @@
 #!/bin/bash
-yum update -y
+apt-get install -y python3-pip
+# https://docs.opencv.org/4.x/d2/de6/tutorial_py_setup_in_ubuntu.htmlk
+apt-get install python3-opencv
 
-# nginx conf
-yum install -y nginx
-
-# install pip
-yum install -y python-pip
-
-# install python dependencies
-pip3 install --upgrade pip
-cd /var/www/html/ || exit
+# need to install streamlit with sudo since application is run with sudo
+cd /usr/src/app || exit
 pip3 install -r requirements.txt
