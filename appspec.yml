@@ -2,9 +2,7 @@ version: 0.0
 os: linux
 files:
   - source: /
-    destination: /var/www/html/
-  - source: /aws/nginx.conf
-    destination: /etc/nginx/nginx.conf
+    destination: /usr/src/app
 hooks:
   BeforeInstall:
     - location: /aws/scripts/install_dependencies
