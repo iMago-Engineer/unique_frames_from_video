@@ -2,7 +2,7 @@ version: 0.0
 os: linux
 files:
   - source: /
-    destination: /usr/src/app
+    destination: /usr/src/app # デプロイの前に /usr/src/app を作成しておく
 hooks:
   BeforeInstall:
     - location: /aws/scripts/install_dependencies
