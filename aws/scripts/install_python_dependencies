@@ -1,0 +1,3 @@
+#!/bin/bash
+cd /usr/src/app || exit
+pip3 install -r requirements.txt
